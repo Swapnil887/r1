@@ -1,0 +1,66 @@
+use bank
+'switched to db bank'
+db.users.insertMany([ {
+      "_id": ObjectId("618c4f101f0c7a000d936e9c"),
+      "name": "Aman",
+      "profession": "Software developer",
+      "salary": 50000
+    },
+    {
+      "_id": ObjectId("618c4fe51f0c7a000d936e9d"),
+      "name": "Albert",
+      "profession": "Director",
+      "salary": 100000
+    }])
+
+
+2...........
+db.Transactions.insertMany([{
+  "_id": ObjectId("618c50d41f0c7a000d936e9e"),
+  "user_id": ObjectId("618c4f101f0c7a000d936e9c"),
+  "type": "withdraw",
+  "amount": 20
+},
+{
+  "_id": ObjectId("618c51c11f0c7a000d936e9f"),
+  "user_id": ObjectId("618c4f101f0c7a000d936e9c"),
+  "type": "deposit",
+  "amount": 50
+},
+{
+  "_id": ObjectId("618c529e1f0c7a000d936ea0"),
+  "user_id": ObjectId("618c4fe51f0c7a000d936e9d"),
+  "type": "deposit",
+  "amount": 30
+},
+{
+  "_id": ObjectId("618c538c1f0c7a000d936ea1"),
+  "user_id": ObjectId("618c4fe51f0c7a000d936e9d"),
+  "type": "withdraw",
+  "amount": 10
+},
+{
+  "_id": ObjectId("618c545b1f0c7a000d936ea2"),
+  "user_id": ObjectId("618c4f101f0c7a000d936e9c"),
+  "type": "deposit",
+  "amount": 20
+}])
+
+3...............
+db.Transactions.aggregate([{$group:{_id:{_id:"$user_id",type:"$type"},total:{$sum:"$amount"}}},{$group:{_id:"$_id._id", maxtotal:{$max:"$total" } } },{$out:"max"} ])
+
+4.
+db.Transactions.aggregate([{$group:{_id:{_id:"$user_id",type:"$type"},total:{$sum:"$amount"}}},{$group:{_id:"$_id._id", maxtotal:{$min:"$total" } } },{$out:"min"} ])
+
+5.
+db.max.aggregate({$lookup:{from:"min",localField:"_id",foreignField:"_id",as:"min"}})
+
+6.
+db.max.aggregate([{$lookup:{from:"min",localField:"_id",foreignField:"_id",as:"min"}},{$unwind:"$min"},{ $project: { item: 1, dateDifference: { $subtract: [ "$maxtotal", "$min.maxtotal" ] } } } ])
+
+7.
+db.max.aggregate([{$lookup:{from:"min",localField:"_id",foreignField:"_id",as:"min"}},{$unwind:"$min"},{ $project: { item: 1, dateDifference: { $subtract: [ "$maxtotal", "$min.maxtotal" ] } } },{$lookup:{from:"users",localField:"_id",foreignField:"_id",as:"users"}} ])
+
+8.
+db.max.aggregate([{$lookup:{from:"min",localField:"_id",foreignField:"_id",as:"min"}},{$unwind:"$min"},{ $project: { item: 1, dateDifference: { $subtract: [ "$maxtotal", "$min.maxtotal" ] } } },{$lookup:{from:"users",localField:"_id",foreignField:"_id",as:"users"}},{$unwind:"$users"},{$project:{"user":"$users.name","totalBalance":"$dateDifference"}} ])
+
